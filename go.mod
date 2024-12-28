@@ -1,4 +1,4 @@
-module my-cli-tool
+module github.com/prashantkr29/CLI-TOOL/cmd
 
 go 1.20
 
