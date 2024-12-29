@@ -44,6 +44,8 @@ var RootCmd = &cobra.Command{
 
 func main() {
 	RootCmd.AddCommand(container.ContainerCmd, host.HostCmd)
+	RootCmd.AddCommand(container.ContainerCpu, host.HostCpu)
+	RootCmd.AddCommand(container.ContainerMemory, host.HostMemory)
 	Cmd.AddCommand(osCmd, RootCmd)
 	if err := Cmd.Execute(); err != nil {
 		fmt.Println(err)
