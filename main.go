@@ -5,11 +5,13 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/prashantkr29/CLI-TOOL/cmd/container"
+	"github.com/prashantkr29/CLI-TOOL/cmd/host"
 	"github.com/spf13/cobra"
 )
 
 // syntax to build a basic command utility
-var rootCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "mycli",
 	Short: "root command for terminal",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -32,10 +34,18 @@ var osCmd = &cobra.Command{
 	},
 }
 
-func main() {
-	rootCmd.AddCommand(osCmd)
+var RootCmd = &cobra.Command{
+	Use:   "monitor",
+	Short: "Monitor system and container stats using eBPF",
+	Run: func(RootCmd *cobra.Command, args []string) {
+		fmt.Print("run commands for host and container")
+	},
+}
 
-	if err := rootCmd.Execute(); err != nil {
+func main() {
+	RootCmd.AddCommand(container.ContainerCmd, host.HostCmd)
+	Cmd.AddCommand(osCmd, RootCmd)
+	if err := Cmd.Execute(); err != nil {
 		fmt.Println(err)
 	}
 }
