@@ -219,7 +219,7 @@ var HostDisk = &cobra.Command{
 			fmt.Println("\nDisk I/O:")
 			monitorDiskIO()
 
-			// Refresh every 10 seconds
+			// Refresh every 2 seconds
 			time.Sleep(2 * time.Second)
 		}
 	},
