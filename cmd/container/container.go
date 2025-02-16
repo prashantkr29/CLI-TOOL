@@ -1,11 +1,12 @@
 package container
 
 import (
+	"context"
 	"fmt"
-	"io"
-	"os/exec"
-	"strings"
+	"log"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/spf13/cobra"
 )
 
@@ -21,59 +22,21 @@ var ContainerCpu = &cobra.Command{
 	Use:   "container-cpu",
 	Short: "Monitor Container-cpu usage",
 	Run: func(cmd *cobra.Command, args []string) {
-		command := exec.Command("curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/containers/json")
-		output, err := command.Output()
+		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
-			fmt.Println("Error executing curl command:", err)
-			return
+			log.Fatalf("Error creating Docker client: %v", err)
 		}
 
-		// Use jq to filter and extract the container IDs
-		cmdJq := exec.Command("jq", "-r", ".[].Id")
-		cmdJq.Stdin = strings.NewReader(string(output))
-		containerIds, err := cmdJq.Output()
+		// Get a list of running containers
+		containers, err := cli.ContainerList(context.Background(), container.ListOptions{})
 		if err != nil {
-			fmt.Println("Error executing jq command:", err)
-			return
+			log.Fatalf("Error listing containers: %v", err)
 		}
 
-		// Print the container IDs
-		fmt.Println(string(containerIds))
-		ids := strings.Split(string(containerIds), "\n")
-
-		// Iterate over the container IDs
-		for _, containerID := range ids {
-			if containerID == "" {
-				continue // Skip empty container IDs
-			}
-			fmt.Printf("Fetching CPU stats for container: %s\n", containerID)
-
-			// io.Pipe() to connect the output of curl to jq
-			pr, pw := io.Pipe()
-
-			cmdStats := exec.Command("curl", "--unix-socket", "/var/run/docker.sock", fmt.Sprintf("http://localhost/containers/%s/stats?stream=false", containerID))
-			cmdStats.Stdout = pw // Set the pipe's writer to the curl command's output
-
-			//Execute jq to process the output of curl
-			cmdJqStats := exec.Command("jq", ".cpu_stats.cpu_usage.total_usage, .cpu_stats.system_cpu_usage")
-			cmdJqStats.Stdin = pr // Set the pipe's reader to jq's input
-
-			//Start the jqStats and stats commands
-			go func() {
-				if err := cmdStats.Run(); err != nil {
-					fmt.Println("Error running curl:", err)
-				}
-				pw.Close() // Close the pipe once curl finishes
-			}()
-
-			statsOutput, err := cmdJqStats.Output()
-			if err != nil {
-				fmt.Println("Error fetching CPU stats:", err)
-				continue
-			}
-
-			// Print CPU stats (total usage and system CPU usage)
-			fmt.Printf("CPU Stats for container cpu usage and system cpu usage %s: %s\n", containerID, "\n", string(statsOutput))
+		// Print container IDs
+		fmt.Println("Running Containers:")
+		for _, container := range containers {
+			fmt.Println(container.ID[:12], container.Image, container.State)
 		}
 	},
 }
@@ -82,5 +45,36 @@ var ContainerMemory = &cobra.Command{
 	Short: "Monitor Container-memory usage",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Monitor memory stats for container")
+	},
+}
+
+var ContainerProcess = &cobra.Command{
+	Use:   "container-process",
+	Short: "Fetch Container Processes",
+	Run: func(cmd *cobra.Command, args []string) {
+		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		if err != nil {
+			log.Fatalf("Error creating Docker client: %v", err)
+		}
+
+		// Get a list of running containers
+		containers, err := cli.ContainerList(context.Background(), container.ListOptions{})
+		if err != nil {
+			log.Fatalf("Error listing containers: %v", err)
+		}
+
+		// Print container IDs
+		fmt.Println("Running Containers:")
+		for _, container := range containers {
+			processList, err := cli.ContainerTop(context.Background(), container.ID[:12], []string{"-aux"})
+			if err != nil {
+				log.Fatalf("Error retrieving processes: %v", err)
+			}
+			fmt.Println(container.ID[:12], container.Image, container.State)
+
+			for _, process := range processList.Processes {
+				fmt.Println(process)
+			}
+		}
 	},
 }
