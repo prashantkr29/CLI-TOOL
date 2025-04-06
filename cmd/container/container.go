@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os/exec"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
@@ -18,9 +19,9 @@ var ContainerCmd = &cobra.Command{
 	},
 }
 
-var ContainerCpu = &cobra.Command{
-	Use:   "container-cpu",
-	Short: "Monitor Container-cpu usage",
+var ContainerList = &cobra.Command{
+	Use:   "container-list",
+	Short: "List out the container running on the host",
 	Run: func(cmd *cobra.Command, args []string) {
 		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
@@ -40,11 +41,19 @@ var ContainerCpu = &cobra.Command{
 		}
 	},
 }
-var ContainerMemory = &cobra.Command{
-	Use:   "container-memory",
-	Short: "Monitor Container-memory usage",
+var Containerstats = &cobra.Command{
+	Use:   "container-stats",
+	Short: "Monitor Container stats usage",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Monitor memory stats for container")
+		fmt.Println("Memory Usage for Containers")
+		result := exec.Command("docker", "stats", "--no-stream")
+
+		output, err := result.CombinedOutput()
+		if err != nil {
+			fmt.Println("error fetching the stats")
+			return
+		}
+		fmt.Println(string(output))
 	},
 }
 
